@@ -8,7 +8,8 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 
 - Tabs for Containers, Images, Volumes and Networks, refreshed every 2 seconds
 - Start, stop and delete containers; delete images, volumes and networks (with a y/n prompt)
-- Streams logs for the selected container (`container logs -f`), keeping the last 500 lines
+- Groups containers into Running and Stopped
+- Right pane auto-streams logs for the selected container (`container logs -f`), keeping the last 500 lines
 - Opens an interactive shell in the selected container (`container exec -it <id> sh`), then returns to the UI when you exit. The shell is the `SHELL` constant in `src/app.tsx`.
 - Errors from the CLI are shown in the status line
 
@@ -21,7 +22,6 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 | `r`                 | Refresh now                                     |
 | `d`                 | Delete the selected item (asks y/n; running containers are force-deleted) |
 | `s` / `x`           | Start / stop the selected container             |
-| `l`                 | Stream logs for the selected container          |
 | `e`                 | Exec a shell in the selected (running) container |
 | `q` / `Ctrl+C`      | Quit                                            |
 
