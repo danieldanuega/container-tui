@@ -1,0 +1,15 @@
+[
+  {
+    "configuration": {
+      "creationDate": "2026-10-24T03:41:20Z",
+      "driver": "local",
+      "format": "ext4",
+      "labels": {},
+      "name": "data",
+      "options": {},
+      "sizeInBytes": 549755813888,
+      "source": "/tmp/volumes/data/volume.img"
+    },
+    "id": "data"
+  }
+]
