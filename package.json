@@ -1,0 +1,23 @@
+{
+  "name": "container-tui",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.tsx",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build --compile src/index.tsx --outfile dist/ctui"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.3.0"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.6.8",
+    "@opentui/react": "^0.6.8",
+    "react": "^19.3.1"
+  }
+}
