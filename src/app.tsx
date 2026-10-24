@@ -16,6 +16,7 @@ import {
   stopSystem,
   streamLogs,
 } from "./cli"
+import { ContainerList } from "./components/ContainerList"
 import { LogPane } from "./components/LogPane"
 import { ResourceList, type Row } from "./components/ResourceList"
 import { TabBar } from "./components/TabBar"
@@ -35,15 +36,14 @@ const DELETE = [deleteContainer, deleteImage, deleteVolume, deleteNetwork]
 async function load(tab: number): Promise<{ rows: Row[]; containers: Container[] }> {
   if (tab === 0) {
     const containers = await listContainers()
-    const toRow = (c: Container) => ({ id: c.id, name: c.id, description: `${c.state}  ${c.image}` })
-    const running = containers.filter((c) => c.state === "running")
-    const stopped = containers.filter((c) => c.state !== "running")
-    const rows: Row[] = []
-    for (const [label, group] of [["Running", running], ["Stopped", stopped]] as const) {
-      if (group.length === 0) continue
-      rows.push({ id: `header:${label}`, name: `── ${label} (${group.length}) ──`, description: "", header: true })
-      rows.push(...group.map(toRow))
-    }
+    const toRow = (c: Container) => ({
+      id: c.id,
+      name: c.id,
+      description: `${c.state}  ${c.image}`,
+      running: c.state === "running",
+    })
+    // Running first, matching the order ContainerList shows them in, so arrow keys walk down the screen.
+    const rows: Row[] = [...containers.filter((c) => c.state === "running"), ...containers.filter((c) => c.state !== "running")].map(toRow)
     return { rows, containers }
   }
   if (tab === 1) {
@@ -100,16 +100,14 @@ export function App() {
   }, [tab])
 
   // Track the selection by id so it survives refreshes; fall back to the last index if it vanished.
-  // Header rows are never selectable: move to the nearest real row in the given direction, else the other way.
-  const nearestRow = (from: number, dir: 1 | -1) => {
-    for (const d of [dir, -dir]) {
-      for (let i = from; i >= 0 && i < rows.length; i += d) if (!rows[i]!.header) return i
-    }
-    return 0
-  }
   let index = rows.findIndex((r) => r.id === selectedId)
-  if (index < 0) index = nearestRow(Math.min(lastIndex.current, Math.max(0, rows.length - 1)), 1)
+  if (index < 0) index = Math.min(lastIndex.current, Math.max(0, rows.length - 1))
   const selected = rows[index]
+
+  function select(i: number) {
+    setSelectedId(rows[i]?.id ?? null)
+    lastIndex.current = i
+  }
   const container = tab === 0 ? containers.find((c) => c.id === selected?.id) : undefined
 
   function stopLogs() {
@@ -204,6 +202,9 @@ export function App() {
     if (key.name === "tab") return setTab((tab + (key.shift ? TABS.length - 1 : 1)) % TABS.length)
     if (key.name === "r") return void refresh()
     if (key.shift && key.name === "s") return askStopSystem()
+    // ContainerList is not a focusable select, so move its selection here.
+    if (tab === 0 && (key.name === "up" || key.name === "k")) return select(Math.max(0, index - 1))
+    if (tab === 0 && (key.name === "down" || key.name === "j")) return select(Math.min(rows.length - 1, index + 1))
     if (!selected) return
     if (key.name === "d") return askDelete(selected.id)
     if (!container) return
@@ -217,17 +218,11 @@ export function App() {
     <box style={{ flexDirection: "column", width: "100%", height: "100%" }}>
       <TabBar tabs={TABS} active={tab} />
       <box style={{ flexDirection: "row", flexGrow: 1, minHeight: 0 }}>
-        <ResourceList
-          title={TABS[tab]!}
-          rows={rows}
-          index={index}
-          focused={!confirm}
-          onSelect={(i) => {
-            const target = rows[i]!.header ? nearestRow(i, i > index ? 1 : -1) : i
-            setSelectedId(rows[target]?.id ?? null)
-            lastIndex.current = target
-          }}
-        />
+        {tab === 0 ? (
+          <ContainerList rows={rows} selectedId={selected?.id} />
+        ) : (
+          <ResourceList title={TABS[tab]!} rows={rows} index={index} focused={!confirm} onSelect={select} />
+        )}
         {tab === 0 && <LogPane container={container} logs={logs} />}
       </box>
       <text fg="#ffd75f">{confirm?.prompt || status || " "}</text>
