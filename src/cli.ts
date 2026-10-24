@@ -62,6 +62,8 @@ export const startSystem = async () => {
   return (await proc.exited) === 0
 }
 
+export const stopSystem = () => run(["system", "stop"])
+
 export const startContainer =(id: string) => run(["start", id])
 export const stopContainer = (id: string) => run(["stop", id])
 export const deleteContainer = (id: string, force = false) =>

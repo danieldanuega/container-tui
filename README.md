@@ -23,6 +23,7 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 | `d`                 | Delete the selected item (asks y/n; running containers are force-deleted) |
 | `s` / `x`           | Start / stop the selected container             |
 | `e`                 | Exec a shell in the selected (running) container |
+| `S` (Shift+s)       | Stop the container system (asks y/n, stops all containers, then exits) |
 | `q` / `Ctrl+C`      | Quit                                            |
 
 The footer shows the keys for the current tab.
