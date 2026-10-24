@@ -24,7 +24,7 @@ const SHELL = "sh"
 
 const TABS = ["Containers", "Images", "Volumes", "Networks"] as const
 const HELP = [
-  "s start  x stop  d delete  l logs  e exec  r refresh",
+  "s start  x stop  d delete  e exec  r refresh",
   "d delete  r refresh",
   "d delete  r refresh",
   "d delete  r refresh",
@@ -34,7 +34,15 @@ const DELETE = [deleteContainer, deleteImage, deleteVolume, deleteNetwork]
 async function load(tab: number): Promise<{ rows: Row[]; containers: Container[] }> {
   if (tab === 0) {
     const containers = await listContainers()
-    const rows = containers.map((c) => ({ id: c.id, name: c.id, description: `${c.state}  ${c.image}` }))
+    const toRow = (c: Container) => ({ id: c.id, name: c.id, description: `${c.state}  ${c.image}` })
+    const running = containers.filter((c) => c.state === "running")
+    const stopped = containers.filter((c) => c.state !== "running")
+    const rows: Row[] = []
+    for (const [label, group] of [["Running", running], ["Stopped", stopped]] as const) {
+      if (group.length === 0) continue
+      rows.push({ id: `header:${label}`, name: `── ${label} (${group.length}) ──`, description: "", header: true })
+      rows.push(...group.map(toRow))
+    }
     return { rows, containers }
   }
   if (tab === 1) {
@@ -91,8 +99,15 @@ export function App() {
   }, [tab])
 
   // Track the selection by id so it survives refreshes; fall back to the last index if it vanished.
+  // Header rows are never selectable: move to the nearest real row in the given direction, else the other way.
+  const nearestRow = (from: number, dir: 1 | -1) => {
+    for (const d of [dir, -dir]) {
+      for (let i = from; i >= 0 && i < rows.length; i += d) if (!rows[i]!.header) return i
+    }
+    return 0
+  }
   let index = rows.findIndex((r) => r.id === selectedId)
-  if (index < 0) index = Math.min(lastIndex.current, Math.max(0, rows.length - 1))
+  if (index < 0) index = nearestRow(Math.min(lastIndex.current, Math.max(0, rows.length - 1)), 1)
   const selected = rows[index]
   const container = tab === 0 ? containers.find((c) => c.id === selected?.id) : undefined
 
@@ -101,10 +116,14 @@ export function App() {
     logProc.current = null
   }
 
+  // Stream logs of the selected container; restart when its state changes (e.g. after start/stop).
+  const logId = container?.id
+  const logState = container?.state
   useEffect(() => {
     setLogs([])
+    if (logId) showLogs(logId)
     return stopLogs
-  }, [tab, selected?.id])
+  }, [tab, logId, logState])
 
   async function showLogs(id: string) {
     stopLogs()
@@ -178,22 +197,22 @@ export function App() {
     const id = container.id
     if (key.name === "s") act(`start ${id}`, () => startContainer(id))
     if (key.name === "x") act(`stop ${id}`, () => stopContainer(id))
-    if (key.name === "l") showLogs(id)
     if (key.name === "e") execShell(container)
   })
 
   return (
     <box style={{ flexDirection: "column", width: "100%", height: "100%" }}>
       <TabBar tabs={TABS} active={tab} />
-      <box style={{ flexDirection: "row", flexGrow: 1 }}>
+      <box style={{ flexDirection: "row", flexGrow: 1, minHeight: 0 }}>
         <ResourceList
           title={TABS[tab]!}
           rows={rows}
           index={index}
           focused={!confirm}
-          onSelect={(id, i) => {
-            setSelectedId(id)
-            lastIndex.current = i
+          onSelect={(i) => {
+            const target = rows[i]!.header ? nearestRow(i, i > index ? 1 : -1) : i
+            setSelectedId(rows[target]?.id ?? null)
+            lastIndex.current = target
           }}
         />
         {tab === 0 && <LogPane container={container} logs={logs} />}

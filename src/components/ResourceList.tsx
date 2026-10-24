@@ -1,13 +1,13 @@
 import type { SelectOption } from "@opentui/core"
 
-export type Row = { id: string; name: string; description: string }
+export type Row = { id: string; name: string; description: string; header?: boolean }
 
 export function ResourceList(props: {
   title: string
   rows: Row[]
   index: number
   focused: boolean
-  onSelect: (id: string, index: number) => void
+  onSelect: (index: number) => void
 }) {
   const options: SelectOption[] = props.rows.map((r) => ({
     name: r.name,
@@ -23,8 +23,7 @@ export function ResourceList(props: {
         selectedIndex={props.index}
         focused={props.focused}
         onChange={(i) => {
-          const row = props.rows[i]
-          if (row) props.onSelect(row.id, i)
+          if (props.rows[i]) props.onSelect(i)
         }}
       />
     </box>
