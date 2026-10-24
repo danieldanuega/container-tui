@@ -14,7 +14,7 @@ A terminal UI for Apple's `container` CLI, built with Bun, TypeScript and OpenTU
 
 - `src/cli.ts`: the only module that runs `container`. All flags and JSON field mapping live here.
 - `src/app.tsx`: state, polling, key handling, log streaming and exec.
-- `src/components/`: tab bar, resource list, log pane.
+- `src/components/`: tab bar, resource list, container list, log pane.
 - `src/index.tsx`: renderer setup.
 - `test/`: tests and `fixtures/*.json`, trimmed from real CLI output.
 

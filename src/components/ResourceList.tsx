@@ -1,6 +1,10 @@
 import type { SelectOption } from "@opentui/core"
 
-export type Row = { id: string; name: string; description: string; header?: boolean }
+// Selected-row colors from the Atola design system: atola-blue at 40% over black (terminals have no
+// real transparency), with ink's dark-theme value on top.
+export const HIGHLIGHT = { bg: "#183654", fg: "#f5f5f4" }
+
+export type Row = { id: string; name: string; description: string; running?: boolean }
 
 export function ResourceList(props: {
   title: string
@@ -21,6 +25,10 @@ export function ResourceList(props: {
         style={{ height: "100%" }}
         options={options}
         selectedIndex={props.index}
+        selectedBackgroundColor={HIGHLIGHT.bg}
+        selectedTextColor={HIGHLIGHT.fg}
+        selectedDescriptionColor={HIGHLIGHT.fg}
+        showSelectionIndicator={false}
         focused={props.focused}
         onChange={(i) => {
           if (props.rows[i]) props.onSelect(i)

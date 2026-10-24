@@ -8,7 +8,7 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 
 - Tabs for Containers, Images, Volumes and Networks, refreshed every 2 seconds
 - Start, stop and delete containers; delete images, volumes and networks (with a y/n prompt)
-- Groups containers into Running and Stopped
+- Groups containers into separate Running and Stopped panels, with a green ● for running and a ○ for stopped containers
 - Right pane auto-streams logs for the selected container (`container logs -f`), keeping the last 500 lines
 - Opens an interactive shell in the selected container (`container exec -it <id> sh`), then returns to the UI when you exit. The shell is the `SHELL` constant in `src/app.tsx`.
 - Errors from the CLI are shown in the status line
@@ -56,7 +56,7 @@ It shells out to the `container` CLI (using `Bun.spawn`) rather than talking to 
 
 - `src/cli.ts` is the only module that runs `container`. It holds all CLI flags and JSON mapping, since these change between CLI releases.
 - `src/app.tsx` polls the current tab's list, tracks the selection by id, and handles key presses. Exec suspends the renderer so the child process owns the terminal, then resumes it afterwards.
-- `src/components/` has the tab bar, list and log pane.
+- `src/components/` has the tab bar, the lists (a generic `select` list, and a container list with per-row status dots) and the log pane.
 - `src/index.tsx` creates the renderer.
 
 ## Contributing
