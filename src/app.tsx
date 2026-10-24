@@ -13,6 +13,7 @@ import {
   listVolumes,
   startContainer,
   stopContainer,
+  stopSystem,
   streamLogs,
 } from "./cli"
 import { LogPane } from "./components/LogPane"
@@ -24,10 +25,10 @@ const SHELL = "sh"
 
 const TABS = ["Containers", "Images", "Volumes", "Networks"] as const
 const HELP = [
-  "s start  x stop  d delete  e exec  r refresh",
-  "d delete  r refresh",
-  "d delete  r refresh",
-  "d delete  r refresh",
+  "s start  x stop  d delete  e exec  r refresh  S stop system",
+  "d delete  r refresh  S stop system",
+  "d delete  r refresh  S stop system",
+  "d delete  r refresh  S stop system",
 ]
 const DELETE = [deleteContainer, deleteImage, deleteVolume, deleteNetwork]
 
@@ -179,6 +180,17 @@ export function App() {
     process.exit(0)
   }
 
+  function askStopSystem() {
+    setConfirm({
+      prompt: "Stop the container system? This stops all running containers and exits. [y/n]",
+      label: "stop container system",
+      run: async () => {
+        await stopSystem()
+        quit()
+      },
+    })
+  }
+
   useKeyboard((key) => {
     if (key.name === "q" || (key.ctrl && key.name === "c")) return quit()
     if (confirm) {
@@ -191,6 +203,7 @@ export function App() {
     if (n >= 1 && n <= TABS.length) return setTab(n - 1)
     if (key.name === "tab") return setTab((tab + (key.shift ? TABS.length - 1 : 1)) % TABS.length)
     if (key.name === "r") return void refresh()
+    if (key.shift && key.name === "s") return askStopSystem()
     if (!selected) return
     if (key.name === "d") return askDelete(selected.id)
     if (!container) return

@@ -50,7 +50,21 @@ export const listImages = async () => parseImages(await listJson(["image", "list
 export const listVolumes = async () => parseVolumes(await listJson(["volume", "list"]))
 export const listNetworks = async () => parseNetworks(await listJson(["network", "list"]))
 
-export const startContainer = (id: string) => run(["start", id])
+// `system status` exits non-zero when the API server is not running.
+export const isSystemRunning = async () => {
+  const proc = Bun.spawn([BIN, "system", "status"], { stdout: "ignore", stderr: "ignore" })
+  return (await proc.exited) === 0
+}
+
+// Inherits stdio because `system start` can prompt (e.g. to install the default kernel).
+export const startSystem = async () => {
+  const proc = Bun.spawn([BIN, "system", "start"], { stdio: ["inherit", "inherit", "inherit"] })
+  return (await proc.exited) === 0
+}
+
+export const stopSystem = () => run(["system", "stop"])
+
+export const startContainer =(id: string) => run(["start", id])
 export const stopContainer = (id: string) => run(["stop", id])
 export const deleteContainer = (id: string, force = false) =>
   run(["delete", ...(force ? ["--force"] : []), id])
