@@ -29,7 +29,7 @@ The footer shows the keys for the current tab.
 
 ## Requirements
 
-- Apple silicon Mac running macOS with the [`container` CLI](https://github.com/apple/container) installed (developed against 1.6.1) and its service started (`container system start`)
+- Apple silicon Mac running macOS with the [`container` CLI](https://github.com/apple/container) installed (developed against 1.6.1). If its service is not running, ctui asks whether to start it (`container system start`) and exits if you decline
 - [Bun](https://bun.sh) (developed against 1.4.2)
 
 ## Getting started
