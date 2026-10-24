@@ -2,7 +2,7 @@
 
 A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI. Browse your Linux containers, tail their logs and drop into a shell without leaving the terminal.
 
-> **Status:** v1. Expect rough edges.
+> **Status:** v2026.10.1. Expect rough edges.
 
 ## Features
 
