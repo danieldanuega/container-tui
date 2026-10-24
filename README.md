@@ -23,13 +23,14 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 | `d`                 | Delete the selected item (asks y/n; running containers are force-deleted) |
 | `s` / `x`           | Start / stop the selected container             |
 | `e`                 | Exec a shell in the selected (running) container |
+| `S` (Shift+s)       | Stop the container system (asks y/n, stops all containers, then exits) |
 | `q` / `Ctrl+C`      | Quit                                            |
 
 The footer shows the keys for the current tab.
 
 ## Requirements
 
-- Apple silicon Mac running macOS with the [`container` CLI](https://github.com/apple/container) installed (developed against 1.6.1) and its service started (`container system start`)
+- Apple silicon Mac running macOS with the [`container` CLI](https://github.com/apple/container) installed (developed against 1.6.1). If its service is not running, ctui asks whether to start it (`container system start`) and exits if you decline
 - [Bun](https://bun.sh) (developed against 1.4.2)
 
 ## Getting started
