@@ -7,6 +7,7 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 ## Features
 
 - Tabs for Containers, Images, Volumes and Networks, refreshed every 2 seconds
+- Run a container from the selected image (`container run --detach`). It asks for a container volume or a host directory to mount, a port to publish and whether to use the default network. Images with only amd64 variants are run with `--arch amd64` (Rosetta) automatically
 - Start, stop and delete containers; delete images, volumes and networks (with a y/n prompt)
 - Groups containers into separate Running and Stopped panels, with a green ● for running and a ○ for stopped containers
 - Right pane auto-streams logs for the selected container (`container logs -f`), keeping the last 500 lines
@@ -21,7 +22,8 @@ A terminal UI for [Apple's `container`](https://github.com/apple/container) CLI.
 | `↑` / `↓`           | Select an item                                  |
 | `r`                 | Refresh now                                     |
 | `d`                 | Delete the selected item (asks y/n; running containers are force-deleted) |
-| `s` / `x`           | Start / stop the selected container             |
+| `Enter` / `Space`, `x` | Start / stop the selected container          |
+| `Enter` (Images)    | Run a container from the selected image (`Esc` cancels the prompts) |
 | `e`                 | Exec a shell in the selected (running) container |
 | `S` (Shift+s)       | Stop the container system (asks y/n, stops all containers, then exits) |
 | `q` / `Ctrl+C`      | Quit                                            |
