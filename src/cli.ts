@@ -68,6 +68,29 @@ export const startContainer =(id: string) => run(["start", id])
 export const stopContainer = (id: string) => run(["stop", id])
 export const deleteContainer = (id: string, force = false) =>
   run(["delete", ...(force ? ["--force"] : []), id])
+export type RunOptions = { volume?: string; port?: string; network?: string }
+
+// On Apple silicon, an image with only amd64 Linux variants needs `--arch amd64`, which runs it under
+// Rosetta. `variants` lists only the platforms pulled locally; attestation entries have os "unknown".
+export function archArgs(variants: { platform?: { os?: string; architecture?: string } }[]): string[] {
+  const arches = new Set(variants.filter((v) => v.platform?.os === "linux").map((v) => v.platform?.architecture))
+  return !arches.has("arm64") && arches.has("amd64") ? ["--arch", "amd64"] : []
+}
+
+export const runArgs = (image: string, o: RunOptions, arch: string[] = []) => [
+  "run",
+  "--detach",
+  ...arch,
+  ...(o.volume ? ["--volume", o.volume] : []),
+  ...(o.port ? ["--publish", o.port] : []),
+  ...(o.network ? ["--network", o.network] : []),
+  image,
+]
+// `image inspect` prints the same array shape as `image list`.
+export async function runContainer(image: string, o: RunOptions) {
+  const [info] = JSON.parse(await run(["image", "inspect", image]))
+  return run(runArgs(image, o, archArgs(info?.variants ?? [])))
+}
 export const deleteImage = (name: string) => run(["image", "delete", name])
 export const deleteVolume = (name: string) => run(["volume", "delete", name])
 export const deleteNetwork = (name: string) => run(["network", "delete", name])
