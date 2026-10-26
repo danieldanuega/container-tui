@@ -11,6 +11,8 @@ import {
   listImages,
   listNetworks,
   listVolumes,
+  type RunOptions,
+  runContainer,
   startContainer,
   stopContainer,
   stopSystem,
@@ -26,8 +28,8 @@ const SHELL = "sh"
 
 const TABS = ["Containers", "Images", "Volumes", "Networks"] as const
 const HELP = [
-  "s start  x stop  d delete  e exec  r refresh  S stop system",
-  "d delete  r refresh  S stop system",
+  "enter/space start  x stop  d delete  e exec  r refresh  S stop system",
+  "enter run  d delete  r refresh  S stop system",
   "d delete  r refresh  S stop system",
   "d delete  r refresh  S stop system",
 ]
@@ -62,6 +64,23 @@ async function load(tab: number): Promise<{ rows: Row[]; containers: Container[]
   return { rows, containers: [] }
 }
 
+// Steps of the run form opened by Enter on the Images tab. "Kind" steps take one key, the others a line of text.
+type RunStep = "volumeKind" | "volume" | "port" | "networkKind" | "network"
+type RunForm = { image: string; step: RunStep; volumeKind?: "volume" | "host"; options: RunOptions }
+
+const RUN_PROMPTS: Record<RunStep, string> = {
+  volumeKind: "Volume: [n] none  [v] container volume  [h] host directory",
+  volume: "", // depends on volumeKind, see runPrompt
+  port: "Publish port as host:container, empty for none:",
+  networkKind: "Use the default network? [y/n]",
+  network: "Network name:",
+}
+
+function runPrompt(form: RunForm) {
+  if (form.step !== "volume") return RUN_PROMPTS[form.step]
+  return form.volumeKind === "host" ? "Host directory as /host/path:/container/path:" : "Volume as name:/container/path:"
+}
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
 export function App() {
@@ -73,6 +92,8 @@ export function App() {
   const [logs, setLogs] = useState<string[]>([])
   const [status, setStatus] = useState("")
   const [confirm, setConfirm] = useState<{ prompt: string; label: string; run: () => Promise<unknown> } | null>(null)
+  const [runForm, setRunForm] = useState<RunForm | null>(null)
+  const runInput = useRef("")
   const lastIndex = useRef(0)
   const logProc = useRef<ReturnType<typeof streamLogs> | null>(null)
   const tabRef = useRef(tab)
@@ -98,6 +119,13 @@ export function App() {
     const timer = setInterval(refresh, 2000)
     return () => clearInterval(timer)
   }, [tab])
+
+  // Clear the status line 3 seconds after its last change.
+  useEffect(() => {
+    if (!status) return
+    const timer = setTimeout(() => setStatus(""), 3000)
+    return () => clearTimeout(timer)
+  }, [status])
 
   // Track the selection by id so it survives refreshes; fall back to the last index if it vanished.
   let index = rows.findIndex((r) => r.id === selectedId)
@@ -172,6 +200,37 @@ export function App() {
     })
   }
 
+  function startRunForm(image: string) {
+    runInput.current = ""
+    setRunForm({ image, step: "volumeKind", options: {} })
+  }
+
+  // Advances the run form; `value` is the key or text the current step got. Runs the container after the last step.
+  function nextRunStep(form: RunForm, value: string) {
+    const options = { ...form.options }
+    let next: RunStep | null = null
+    if (form.step === "volumeKind") {
+      if (value === "v" || value === "h") return setRunForm({ ...form, step: "volume", volumeKind: value === "v" ? "volume" : "host" })
+      if (value !== "n") return
+      next = "port"
+    } else if (form.step === "volume") {
+      if (value) options.volume = value
+      next = "port"
+    } else if (form.step === "port") {
+      if (value) options.port = value
+      next = "networkKind"
+    } else if (form.step === "networkKind") {
+      if (value === "n") next = "network"
+      else if (value !== "y") return
+    } else if (value) {
+      options.network = value
+    }
+    runInput.current = ""
+    if (next) return setRunForm({ ...form, step: next, options })
+    setRunForm(null)
+    act(`run ${form.image}`, () => runContainer(form.image, options))
+  }
+
   function quit() {
     stopLogs()
     renderer.destroy()
@@ -190,7 +249,18 @@ export function App() {
   }
 
   useKeyboard((key) => {
-    if (key.name === "q" || (key.ctrl && key.name === "c")) return quit()
+    if (key.ctrl && key.name === "c") return quit()
+    if (runForm) {
+      if (key.name === "escape") {
+        setRunForm(null)
+        return setStatus("cancelled")
+      }
+      // Text steps go to the input; only Enter is handled here.
+      if (runForm.step.endsWith("Kind")) nextRunStep(runForm, key.name)
+      else if (key.name === "return") nextRunStep(runForm, runInput.current.trim())
+      return
+    }
+    if (key.name === "q") return quit()
     if (confirm) {
       setConfirm(null)
       if (key.name === "y") act(confirm.label, confirm.run)
@@ -207,9 +277,10 @@ export function App() {
     if (tab === 0 && (key.name === "down" || key.name === "j")) return select(Math.min(rows.length - 1, index + 1))
     if (!selected) return
     if (key.name === "d") return askDelete(selected.id)
+    if (tab === 1 && key.name === "return") return startRunForm(selected.id)
     if (!container) return
     const id = container.id
-    if (key.name === "s") act(`start ${id}`, () => startContainer(id))
+    if (key.name === "return" || key.name === "space") act(`start ${id}`, () => startContainer(id))
     if (key.name === "x") act(`stop ${id}`, () => stopContainer(id))
     if (key.name === "e") execShell(container)
   })
@@ -221,12 +292,19 @@ export function App() {
         {tab === 0 ? (
           <ContainerList rows={rows} selectedId={selected?.id} />
         ) : (
-          <ResourceList title={TABS[tab]!} rows={rows} index={index} focused={!confirm} onSelect={select} />
+          <ResourceList title={TABS[tab]!} rows={rows} index={index} focused={!confirm && !runForm} onSelect={select} />
         )}
         {tab === 0 && <LogPane container={container} logs={logs} />}
       </box>
-      <text fg="#ffd75f">{confirm?.prompt || status || " "}</text>
-      <text fg="#888888">{`${HELP[tab]}  1-4/tab switch tabs  q quit`}</text>
+      {runForm && !runForm.step.endsWith("Kind") ? (
+        <box style={{ flexDirection: "row", height: 1, flexShrink: 0 }}>
+          <text fg="#ffd75f">{`${runPrompt(runForm)} `}</text>
+          <input key={runForm.step} focused style={{ flexGrow: 1 }} onInput={(v) => (runInput.current = v)} />
+        </box>
+      ) : (
+        <text fg="#ffd75f" style={{ flexShrink: 0 }}>{(runForm && runPrompt(runForm)) || confirm?.prompt || status || " "}</text>
+      )}
+      <text fg="#888888" style={{ flexShrink: 0 }}>{`${HELP[tab]}  1-4/tab switch tabs  q quit`}</text>
     </box>
   )
 }

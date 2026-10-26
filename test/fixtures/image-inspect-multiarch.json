@@ -1,0 +1,14 @@
+[
+  {
+    "configuration": {
+      "name": "docker.io/library/python:3.11-slim",
+      "descriptor": { "mediaType": "application/vnd.oci.image.index.v1+json" }
+    },
+    "variants": [
+      { "platform": { "architecture": "amd64", "os": "linux" } },
+      { "platform": { "architecture": "unknown", "os": "unknown" } },
+      { "platform": { "architecture": "arm64", "os": "linux", "variant": "v8" } },
+      { "platform": { "architecture": "unknown", "os": "unknown" } }
+    ]
+  }
+]

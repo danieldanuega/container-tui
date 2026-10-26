@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
-import { execArgs, parseContainers, parseImages, parseNetworks, parseVolumes } from "../src/cli"
+import { archArgs, execArgs, parseContainers, parseImages, parseNetworks, parseVolumes, runArgs } from "../src/cli"
 import containers from "./fixtures/containers.json"
+import amd64Image from "./fixtures/image-inspect-amd64.json"
+import multiArchImage from "./fixtures/image-inspect-multiarch.json"
 import images from "./fixtures/images.json"
 import networks from "./fixtures/networks.json"
 import volumes from "./fixtures/volumes.json"
@@ -26,4 +28,17 @@ test("parseNetworks maps name, mode and subnet", () => {
 
 test("execArgs builds an interactive exec command", () => {
   expect(execArgs("web", "sh")).toEqual(["container", "exec", "-it", "web", "sh"])
+})
+
+test("archArgs picks amd64 only when the image has no arm64 variant", () => {
+  expect(archArgs(amd64Image[0]!.variants)).toEqual(["--arch", "amd64"])
+  expect(archArgs(multiArchImage[0]!.variants)).toEqual([])
+  expect(archArgs(images[0]!.variants)).toEqual([])
+})
+
+test("runArgs adds only the options that were given", () => {
+  expect(runArgs("alpine", {})).toEqual(["run", "--detach", "alpine"])
+  expect(runArgs("web", { volume: "/src:/app", port: "8080:80", network: "dev" }, ["--arch", "amd64"])).toEqual([
+    "run", "--detach", "--arch", "amd64", "--volume", "/src:/app", "--publish", "8080:80", "--network", "dev", "web",
+  ])
 })
