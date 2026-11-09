@@ -68,7 +68,7 @@ export const startContainer =(id: string) => run(["start", id])
 export const stopContainer = (id: string) => run(["stop", id])
 export const deleteContainer = (id: string, force = false) =>
   run(["delete", ...(force ? ["--force"] : []), id])
-export type RunOptions = { volume?: string; port?: string; network?: string }
+export type RunOptions = { name?: string; volume?: string; port?: string; network?: string }
 
 // On Apple silicon, an image with only amd64 Linux variants needs `--arch amd64`, which runs it under
 // Rosetta. `variants` lists only the platforms pulled locally; attestation entries have os "unknown".
@@ -81,15 +81,26 @@ export const runArgs = (image: string, o: RunOptions, arch: string[] = []) => [
   "run",
   "--detach",
   ...arch,
+  ...(o.name ? ["--name", o.name] : []),
   ...(o.volume ? ["--volume", o.volume] : []),
   ...(o.port ? ["--publish", o.port] : []),
   ...(o.network ? ["--network", o.network] : []),
   image,
 ]
+// An image can be labelled arm64 yet hold an amd64 binary, which only shows up when the exec fails.
+export const needsRosetta = (e: unknown) => e instanceof Error && e.message.includes("Exec format error")
+
 // `image inspect` prints the same array shape as `image list`.
 export async function runContainer(image: string, o: RunOptions) {
   const [info] = JSON.parse(await run(["image", "inspect", image]))
-  return run(runArgs(image, o, archArgs(info?.variants ?? [])))
+  const arch = archArgs(info?.variants ?? [])
+  try {
+    return await run(runArgs(image, o, arch))
+  } catch (e) {
+    // The failed run leaves no container behind, so it is safe to retry.
+    if (!needsRosetta(e)) throw e
+    return run(runArgs(image, o, [...arch, "--rosetta"]))
+  }
 }
 export const deleteImage = (name: string) => run(["image", "delete", name])
 export const deleteVolume = (name: string) => run(["volume", "delete", name])
