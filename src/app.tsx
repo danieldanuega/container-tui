@@ -65,10 +65,11 @@ async function load(tab: number): Promise<{ rows: Row[]; containers: Container[]
 }
 
 // Steps of the run form opened by Enter on the Images tab. "Kind" steps take one key, the others a line of text.
-type RunStep = "volumeKind" | "volume" | "port" | "networkKind" | "network"
+type RunStep = "name" | "volumeKind" | "volume" | "port" | "networkKind" | "network"
 type RunForm = { image: string; step: RunStep; volumeKind?: "volume" | "host"; options: RunOptions }
 
 const RUN_PROMPTS: Record<RunStep, string> = {
+  name: "Container name, empty for a generated id:",
   volumeKind: "Volume: [n] none  [v] container volume  [h] host directory",
   volume: "", // depends on volumeKind, see runPrompt
   port: "Publish port as host:container, empty for none:",
@@ -202,14 +203,17 @@ export function App() {
 
   function startRunForm(image: string) {
     runInput.current = ""
-    setRunForm({ image, step: "volumeKind", options: {} })
+    setRunForm({ image, step: "name", options: {} })
   }
 
   // Advances the run form; `value` is the key or text the current step got. Runs the container after the last step.
   function nextRunStep(form: RunForm, value: string) {
     const options = { ...form.options }
     let next: RunStep | null = null
-    if (form.step === "volumeKind") {
+    if (form.step === "name") {
+      if (value) options.name = value
+      next = "volumeKind"
+    } else if (form.step === "volumeKind") {
       if (value === "v" || value === "h") return setRunForm({ ...form, step: "volume", volumeKind: value === "v" ? "volume" : "host" })
       if (value !== "n") return
       next = "port"
