@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { archArgs, execArgs, parseContainers, parseImages, parseNetworks, parseVolumes, runArgs } from "../src/cli"
+import { archArgs, execArgs, needsRosetta, parseContainers, parseImages, parseNetworks, parseVolumes, runArgs } from "../src/cli"
 import containers from "./fixtures/containers.json"
 import amd64Image from "./fixtures/image-inspect-amd64.json"
 import multiArchImage from "./fixtures/image-inspect-multiarch.json"
@@ -38,7 +38,13 @@ test("archArgs picks amd64 only when the image has no arm64 variant", () => {
 
 test("runArgs adds only the options that were given", () => {
   expect(runArgs("alpine", {})).toEqual(["run", "--detach", "alpine"])
-  expect(runArgs("web", { volume: "/src:/app", port: "8080:80", network: "dev" }, ["--arch", "amd64"])).toEqual([
-    "run", "--detach", "--arch", "amd64", "--volume", "/src:/app", "--publish", "8080:80", "--network", "dev", "web",
+  expect(runArgs("web", { name: "api", volume: "/src:/app", port: "8080:80", network: "dev" }, ["--arch", "amd64"])).toEqual([
+    "run", "--detach", "--arch", "amd64", "--name", "api", "--volume", "/src:/app", "--publish", "8080:80", "--network", "dev", "web",
   ])
+})
+
+test("needsRosetta matches only an exec format error", () => {
+  const execFormat = `Error: failed to start process web in container web (cause: "internalError: "failed to exec [/pb/pocketbase serve] Error Domain=NSPOSIXErrorDomain Code=8 "Exec format error""")`
+  expect(needsRosetta(new Error(execFormat))).toBe(true)
+  expect(needsRosetta(new Error("Error: port 9000 already in use"))).toBe(false)
 })
